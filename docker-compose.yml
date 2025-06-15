@@ -1,0 +1,37 @@
+# docker-compose.yml   (versión limpia y funcional)
+services:
+  api-gateway:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: faceid_api
+    env_file: .env
+    ports:
+      - "8000:8000"
+    depends_on:               # espera a que la BD esté healthy
+      postgres:
+        condition: service_healthy
+    networks: [faceid-net]
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: faceid_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+    healthcheck:              # ← NUEVO: evita el fallo de dependencia
+      test: ["CMD","pg_isready","-U","${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks: [faceid-net]
+
+volumes:
+  dbdata:
+
+networks:
+  faceid-net:
